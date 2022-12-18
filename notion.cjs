@@ -35,18 +35,43 @@ async function getVocabItemsFromNotion() {
         }
         cursor = next_cursor
     }
-    console.log(`${items.length} items successfully fetched.`)
+    console.log(`${items.length} items successfully fetched from notion.`)
     // console.log(items)
 
     for (const item of items) {
         if (item.properties["Added to Anki"].status.name === "No" && item.properties["Word in target lang"].title.length >= 1) {
-            console.log(lang, item.properties["Word in target lang"].title[0].plain_text, ":", item.properties["Word in English"].rollup.array[0].title[0].plain_text)
-            newVocabItems.push({ target: item.properties["Word in target lang"].title[0].plain_text, english: item.properties["Word in English"].rollup.array[0].title[0].plain_text })
+            // console.log(lang, item.properties["Word in target lang"].title[0].plain_text, ":", item.properties["Word in English"].rollup.array[0].title[0].plain_text)
+            newVocabItems.push({ pageID: item.id, target: item.properties["Word in target lang"].title[0].plain_text, english: item.properties["Word in English"].rollup.array[0].title[0].plain_text })
         }
 
     }
+    // currently only console.logs them - should return array of values 
+    console.log("new items:", newVocabItems)
+    return newVocabItems;
 
-    console.log(newVocabItems)
 }
 
-getVocabItemsFromNotion()
+
+const updateAnkiStatusInNotion = async (itemToUpdate) => {
+    // const itemsToUpdate = await getVocabItemsFromNotion()
+    if (!itemToUpdate) {
+        return;
+    }
+    // for (const item of itemsToUpdate) {
+    await notion.pages.update({
+        page_id: itemToUpdate.pageID,
+        properties: {
+            "Added to Anki": {
+                status: {
+                    name: "Yes"
+                }
+            }
+        }
+
+    })
+    // }
+    console.log(`Updated Anki status for  ${itemToUpdate.target}`)
+}
+
+
+module.exports = { getVocabItemsFromNotion, updateAnkiStatusInNotion };
