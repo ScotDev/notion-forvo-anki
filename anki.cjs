@@ -57,9 +57,6 @@ const endpoint = process.env.ANKI_CONNECT_ENDPOINT
 // console.log(`got list of decks: ${result}`);
 
 const invokeAnki = async (action, version, params = {}) => {
-
-
-
     try {
         const response = await axios.post(
             endpoint,

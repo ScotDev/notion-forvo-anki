@@ -31,14 +31,14 @@ const data = await getVocabItemsFromNotion()
 
 // 2. Download all audio files if they exist
 
-const downloadAudio = async () => {
-    data.forEach(item => {
-        console.log("Downloading")
-        downloadAudioFile(item.target).then(() => {
-            console.log(`${item.target} finished download`)
-        })
-    });
-}
+// const downloadAudio = async () => {
+//     data.forEach(item => {
+//         console.log("Downloading")
+//         downloadAudioFile(item.target).then(() => {
+//             console.log(`${item.target} finished download`)
+//         })
+//     });
+// }
 
 // 3. Add a new card to anki deck with entries and audio file attached
 
@@ -56,7 +56,8 @@ const addCards = () => {
                 "note": {
                     deckName: 'testDeck', modelName: "Basic",
                     "fields": {
-                        "Front": `${item.target} `,
+                        // Final whitespace is intentional to separate audio button from text
+                        "Front": `${item.target} (${item.gender}) `,
                         "Back": `${item.english}`
                     },
                     // Does not handle if no audio file availiable

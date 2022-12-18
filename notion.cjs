@@ -39,12 +39,14 @@ async function getVocabItemsFromNotion() {
     // console.log(items)
 
     for (const item of items) {
+        // console.log(item.properties.Gender.select.name.charAt(0))
         if (item.properties["Added to Anki"].status.name === "No" && item.properties["Word in target lang"].title.length >= 1) {
             // console.log(lang, item.properties["Word in target lang"].title[0].plain_text, ":", item.properties["Word in English"].rollup.array[0].title[0].plain_text)
-            newVocabItems.push({ pageID: item.id, target: item.properties["Word in target lang"].title[0].plain_text, english: item.properties["Word in English"].rollup.array[0].title[0].plain_text })
+            newVocabItems.push({ pageID: item.id, target: item.properties["Word in target lang"].title[0].plain_text, english: item.properties["Word in English"].rollup.array[0].title[0].plain_text, gender: item.properties.Gender.select.name ? item.properties.Gender.select.name.charAt(0) : "" })
         }
 
     }
+
     // currently only console.logs them - should return array of values 
     console.log("new items:", newVocabItems)
     return newVocabItems;
