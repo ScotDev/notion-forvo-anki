@@ -8,7 +8,7 @@ dotenv.config()
 
 let targetLangWord;
 
-export const getData = async (targetLangWord) => {
+export const getAudio = async (targetLangWord) => {
     const res = await fetch(`https://apifree.forvo.com/key/${process.env.FORVO_KEY}/format/json/action/word-pronunciations/word/${targetLangWord}/language/ru`)
     const data = await res.json()
     // console.log(data.items)

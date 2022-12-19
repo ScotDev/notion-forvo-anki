@@ -1,5 +1,6 @@
 const { Client } = require("@notionhq/client")
 require('dotenv').config()
+// const { chalk } = await import("chalk")
 
 const notion = new Client({
     auth: process.env.NOTION_ACCESS_TOKEN
@@ -48,7 +49,7 @@ async function getVocabItemsFromNotion() {
     }
 
     // currently only console.logs them - should return array of values 
-    console.log("new items:", newVocabItems)
+    // console.log("new items:", newVocabItems)
     return newVocabItems;
 
 }
@@ -72,7 +73,7 @@ const updateAnkiStatusInNotion = async (itemToUpdate) => {
 
     })
     // }
-    console.log(`Updated Anki status for  ${itemToUpdate.target}`)
+    // Should really return data + error object
 }
 
 

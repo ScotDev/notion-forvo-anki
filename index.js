@@ -4,7 +4,8 @@
 import chalk from "chalk";
 import inquirer from "inquirer";
 // https://www.npmjs.com/package/ora
-import ora from "ora";
+// import ora from "ora";
+import { createSpinner } from 'nanospinner'
 // https://www.npmjs.com/package/listr
 
 // https://github.com/makenotion/notion-sdk-js
@@ -12,22 +13,70 @@ import ora from "ora";
 
 import { getVocabItemsFromNotion, updateAnkiStatusInNotion } from "./notion.cjs";
 import { invokeAnki } from "./anki.cjs";
-import { downloadAudioFile, getData } from "./forvo.js"
+import { getAudio } from "./forvo.js"
+import { isRunning } from "./isRunning.cjs";
 
-let userInput;
+let isAnkiRunning;
 
-// const sleep = (ms = 1000) => new Promise((resolve) => {
-//     setTimeout(resolve, ms)
-// })
+const sleep = (ms = 1000) => new Promise((resolve) => {
+    setTimeout(resolve, ms)
+})
 
-// Worry about user input later
+const spinner = createSpinner()
+
+isRunning('anki.exe', (status) => {
+    isAnkiRunning = status;
+    console.log(status); // true|false
+    // return status;
+    if (!isAnkiRunning) {
+        console.log(chalk.red("Anki must be running with anki-connect add-on"))
+        return process.exit(0)
+    }
+})
 
 // 0. Ensure Anki is running first
+async function getUserInput() {
+    const response = await inquirer.prompt({
+        name: "question_1",
+        type: "list",
+        message: "Notion-anki multi-tool (beta)\n Which service would you like to run?\n",
+        choices: [
+            "Create new cards from notion database",
+            "Second option",
+            "Quit?"
+        ]
+    })
 
+
+    return handleResponse(response.question_1);
+}
+
+const handleResponse = async (res) => {
+    if (res === "Create new cards from notion database") {
+        spinner.start({ text: "Connecting to notion...\n", color: "magenta" })
+        const data = await getVocabItemsFromNotion()
+        await sleep()
+        spinner.success({ text: `${data.length} new items retrieved from notion\n` })
+        addCards(data)
+        // spinner.clear()
+    } else if (res === "Quit?") {
+        spinner.warn({ text: ' Quitting...', color: 'yellow' })
+        // console.log(chalk.yellow("Quitting..."))
+        await sleep()
+        return process.exit(0)
+    }
+    else {
+        spinner.error({ text: 'Error, exiting script...', color: 'red' })
+        await sleep()
+        return process.exit(0)
+    }
+}
+
+
+// 0.5 Ask user if they want to generate translations or just create flashcards
 // 1. loop through all notion entries where added to anki = false (no)
-const data = await getVocabItemsFromNotion()
 
-// console.log("Called from index", data)
+
 
 // 2. Download all audio files if they exist
 
@@ -45,13 +94,33 @@ const data = await getVocabItemsFromNotion()
 
 
 // should be async I think idk
-const addCards = () => {
+const addCards = (data) => {
+
     // let audioURI;
-    console.log(`${data.length} new items found, card creation initiated:`)
+    if (!data.length > 0) {
+        console.log(chalk.yellow("No new items found"))
+        return;
+    }
+    console.log(chalk.green(`${data.length} new items found, card creation started...`))
     data.forEach(item => {
-        console.log(`Finding audio for ${item.target}...`)
-        getData(item.target).then((mp3URI) => {
-            console.log(`Creating card for ${item.target}...`)
+
+        getAudio(item.target).then((mp3URI) => {
+            spinner.start({ text: `Finding audio for ${item.target}...` })
+            if (mp3URI) {
+                spinner.success({ text: `Audio found for ${item.target}` })
+            } else {
+                spinner.error({ text: `Audio for ${item.target} not found` })
+            }
+
+            spinner.start({ text: `Creating card for ${item.target}...` })
+
+            // Anki seems to get overwhelmed if more than 5 or so items are added in quick succession. 
+            // Queue system is necessary - use pop/push to add to a queue. Then loop over queue with timeout of 1 secondf and do this
+            //  let queue = [];
+            // queue.push(2);         // queue is now [2]
+            // queue.push(5);         // queue is now [2, 5]
+            // var i = queue.shift(); // queue is now [5]
+            // alert(i);              
             invokeAnki('addNote', 6, {
                 "note": {
                     deckName: 'testDeck', modelName: "Basic",
@@ -71,40 +140,37 @@ const addCards = () => {
                         ]
                     }],
                 },
+            }).then(() => {
+                spinner.success({ text: `Card created for ${item.target}` })
+                // console.log("Anki ran")
+                spinner.success({ text: `${item.target} added to Anki` })
+            }).then(() => {
+                // Only do this if no error
+                updateAnkiStatusInNotion(item)
+                spinner.success({ text: `${item.target} status updated in notion` })
             })
-        }).then(() => {
-            // Only do this if no error
-
-            updateAnkiStatusInNotion(item)
         })
+
 
 
     })
 
 }
 
-addCards()
+// if (isAnkiRunning) {
+// addCards()
+// } else {
+//     console.log("Anki must be running with anki-connect add-on")
+// }
 
+await getUserInput()
 
 // 4. Add inquirer + chalk + ora
 // TO-DO: If anki deck does not exist, create one. Give user better summary of what the result was, how many were added etc
 
 
-// async function getInput() {
-//     const response = await inquirer.prompt({
-//         name: "userRes",
-//         type: "input",
-//         message: "Input here please"
-//     })
-//     // const testLog = 'Test input here');
-
-//     // await sleep()
-
-//     userInput = response.userRes
-//     console.log(chalk.blue(`${userInput}`))
-// }
-
-// await getInput()
+// if user types exit then quit
+// process.exit(0)
 
 
 // https://foosoft.net/projects/anki-connect/ addNote function

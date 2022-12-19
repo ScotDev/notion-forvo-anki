@@ -56,13 +56,19 @@ const endpoint = process.env.ANKI_CONNECT_ENDPOINT
 // const result = invoke('deckNames', 6);
 // console.log(`got list of decks: ${result}`);
 
+// const sleep = (ms = 1000) => new Promise((resolve) => {
+//     setTimeout(resolve, ms)
+// })
+
 const invokeAnki = async (action, version, params = {}) => {
+
     try {
+        // await sleep()
         const response = await axios.post(
             endpoint,
             JSON.stringify({ action, version, params })
         );
-        console.log(await response.data)
+        // console.log(await response.data)
         if (response.error) {
             // Or response.data.error
             throw response.error;
@@ -81,28 +87,6 @@ const invokeAnki = async (action, version, params = {}) => {
 
 }
 
-// invokeAxios('addNote', 6, {
-//     "note": {
-//         deckName: 'test4', modelName: "Basic",
-//         "fields": {
-//             "Front": "front content2",
-//             "Back": "back content"
-//         }
-//     },
-// })
-
-// "audio": [{
-//     "path":"path": "/path/to/file"
-//     "url": "https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji=猫&kana=ねこ",
-//     "filename": "yomichan_ねこ_猫.mp3",
-//     "skipHash": "7e2c2f954ef6051373ba916f000168dc",
-//     "fields": [
-//         "Front"
-//     ]
-// }],
-
-// const result = invokeAxios('deckNames', 6);
-// console.log(`got list of decks: ${result}`);
 
 // https://reflectoring.io/nodejs-modules-imports/
 
