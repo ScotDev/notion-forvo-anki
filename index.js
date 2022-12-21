@@ -16,33 +16,35 @@ import { invokeAnki } from "./anki.cjs";
 import { getAudio } from "./forvo.js"
 import { isRunning } from "./isRunning.cjs";
 
-let isAnkiRunning;
 
-const sleep = (ms = 1000) => new Promise((resolve) => {
+
+const sleep = (ms = 250) => new Promise((resolve) => {
     setTimeout(resolve, ms)
 })
 
 const spinner = createSpinner()
+const checkIsRunning = async () => {
+    isRunning('anki.exe', (status) => {
+        // console.log(status); // true|false
+        // return status;
+        if (!status) {
+            console.log(chalk.red("Anki must be running with anki-connect add-on"))
+            return process.exit(0)
+        }
+    })
+}
 
-isRunning('anki.exe', (status) => {
-    isAnkiRunning = status;
-    console.log(status); // true|false
-    // return status;
-    if (!isAnkiRunning) {
-        console.log(chalk.red("Anki must be running with anki-connect add-on"))
-        return process.exit(0)
-    }
-})
+
 
 // 0. Ensure Anki is running first
 async function getUserInput() {
+
     const response = await inquirer.prompt({
         name: "question_1",
         type: "list",
         message: "Notion-anki multi-tool (beta)\n Which service would you like to run?\n",
         choices: [
             "Create new cards from notion database",
-            "Second option",
             "Quit?"
         ]
     })
@@ -94,25 +96,95 @@ const handleResponse = async (res) => {
 
 
 // should be async I think idk
-const addCards = (data) => {
+const addCards = async (data) => {
 
-    // let audioURI;
     if (!data.length > 0) {
         console.log(chalk.yellow("No new items found"))
         return;
     }
-    console.log(chalk.green(`${data.length} new items found, card creation started...`))
-    data.forEach(item => {
 
-        getAudio(item.target).then((mp3URI) => {
-            spinner.start({ text: `Finding audio for ${item.target}...` })
+    console.log(chalk.green(`${data.length} new items found, card creation started...`))
+
+
+
+    // data.forEach(item => {
+
+    //     getAudio(item.target).then((mp3URI) => {
+    //         spinner.start({ text: `Finding audio for ${item.target}...` })
+    //         if (mp3URI) {
+    //             spinner.success({ text: `Audio found for ${item.target}` })
+    //         } else {
+    //             spinner.error({ text: `Audio for ${item.target} not found` })
+    //             // This is crude, should not kill process completely. Should just skip item. 
+    //             // Will fix when queue system implemented
+    //             throw "No audio found."
+    //         }
+
+    //         spinner.start({ text: `Creating card for ${item.target}...` })
+
+    //         // Anki seems to get overwhelmed if more than 5 or so items are added in quick succession. 
+    //         // Queue system is necessary - use pop/push to add to a queue. Then loop over queue with timeout of 1 secondf and do this
+    //         //  let queue = [];
+    //         // queue.push(2);         // queue is now [2]
+    //         // queue.push(5);         // queue is now [2, 5]
+    //         // var i = queue.shift(); // queue is now [5]
+    //         // alert(i);              
+
+    //         invokeAnki('addNote', 6, {
+    //             "note": {
+    //                 deckName: 'RussianTest', modelName: "Basic",
+    //                 "fields": {
+    //                     // Final whitespace is intentional to separate audio button from text
+    //                     "Front": `${item.target} (${item.gender}) `,
+    //                     "Back": `${item.english}`
+    //                 },
+    //                 // Does not handle if no audio file availiable
+    //                 "audio": [{
+    //                     "url": `${mp3URI}`,
+    //                     // "path": "audio",
+    //                     "filename": `_${item.target}.mp3`,
+    //                     // "filename": `${item.target}.mp3`,
+    //                     "fields": [
+    //                         "Front"
+    //                     ]
+    //                 }],
+    //             },
+    //         }).then(() => {
+    //             spinner.success({ text: `Card created for ${item.target}` })
+    //             // console.log("Anki ran")
+    //             spinner.success({ text: `${item.target} added to Anki` })
+    //         }).then(() => {
+    //             // Only do this if no error
+    //             updateAnkiStatusInNotion(item)
+    //             spinner.success({ text: `${item.target} status updated in notion` })
+    //         })
+    //     }).catch(error => {
+    //         console.log(error, "Service terminated")
+    //         sleep()
+    //         process.exit(1)
+    //     })
+    // })
+    // Anki-connect does not seem to cope with more that 6 items in quick succession. 
+    // Workaround for now is to change forEach to for lo0p with sleep delay. 250ms seems to be the lowest delay that
+    // works well
+    // I am aware this isn't ideal, and a promise-based forEach loop is better.
+    // https://stackoverflow.com/questions/45498873/add-a-delay-after-executing-each-iteration-with-foreach-loop
+    // Will implement something like this when my brain is not dead from the flu.
+    // This works for now.
+    for (let i = 0; i < data.length; i++) {
+        await sleep()
+        getAudio(data[i].target).then((mp3URI) => {
+            spinner.start({ text: `Finding audio for ${data[i].target}...` })
             if (mp3URI) {
-                spinner.success({ text: `Audio found for ${item.target}` })
+                spinner.success({ text: `Audio found for ${data[i].target}` })
             } else {
-                spinner.error({ text: `Audio for ${item.target} not found` })
+                spinner.error({ text: `Audio for ${data[i].target} not found` })
+                // This is crude, should not kill process completely. Should just skip item. 
+                // Will fix when queue system implemented
+                throw "No audio found."
             }
 
-            spinner.start({ text: `Creating card for ${item.target}...` })
+            spinner.start({ text: `Creating card for ${data[i].target}...` })
 
             // Anki seems to get overwhelmed if more than 5 or so items are added in quick succession. 
             // Queue system is necessary - use pop/push to add to a queue. Then loop over queue with timeout of 1 secondf and do this
@@ -121,19 +193,20 @@ const addCards = (data) => {
             // queue.push(5);         // queue is now [2, 5]
             // var i = queue.shift(); // queue is now [5]
             // alert(i);              
+
             invokeAnki('addNote', 6, {
                 "note": {
-                    deckName: 'testDeck', modelName: "Basic",
+                    deckName: 'RussianTest', modelName: "Basic",
                     "fields": {
                         // Final whitespace is intentional to separate audio button from text
-                        "Front": `${item.target} (${item.gender}) `,
-                        "Back": `${item.english}`
+                        "Front": `${data[i].target} (${data[i].gender}) `,
+                        "Back": `${data[i].english}`
                     },
                     // Does not handle if no audio file availiable
                     "audio": [{
                         "url": `${mp3URI}`,
                         // "path": "audio",
-                        "filename": `_${item.target}.mp3`,
+                        "filename": `_${data[i].target}.mp3`,
                         // "filename": `${item.target}.mp3`,
                         "fields": [
                             "Front"
@@ -141,19 +214,21 @@ const addCards = (data) => {
                     }],
                 },
             }).then(() => {
-                spinner.success({ text: `Card created for ${item.target}` })
+                spinner.success({ text: `Card created for ${data[i].target}` })
                 // console.log("Anki ran")
-                spinner.success({ text: `${item.target} added to Anki` })
+                spinner.success({ text: `${data[i].target} added to Anki` })
             }).then(() => {
                 // Only do this if no error
-                updateAnkiStatusInNotion(item)
-                spinner.success({ text: `${item.target} status updated in notion` })
+                updateAnkiStatusInNotion(data[i])
+                spinner.success({ text: `${data[i].target} status updated in notion` })
             })
+        }).catch(error => {
+            console.log(error, "Service terminated")
+            sleep()
+            process.exit(1)
         })
-
-
-
-    })
+        // console.log(`for loop ${i}`)
+    }
 
 }
 
@@ -162,8 +237,12 @@ const addCards = (data) => {
 // } else {
 //     console.log("Anki must be running with anki-connect add-on")
 // }
+await checkIsRunning()
+
 
 await getUserInput()
+
+
 
 // 4. Add inquirer + chalk + ora
 // TO-DO: If anki deck does not exist, create one. Give user better summary of what the result was, how many were added etc
